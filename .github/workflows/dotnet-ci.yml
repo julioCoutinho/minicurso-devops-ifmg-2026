@@ -39,7 +39,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-api-app
-        path: ./publish
+        path: ./dotnet-project/publish
         retention-days: 1
 
   deploy:

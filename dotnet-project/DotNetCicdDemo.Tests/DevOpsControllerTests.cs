@@ -48,7 +48,7 @@ public class DevOpsControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        dynamic data = okResult.Value;
-        Assert.Equal(expected, data.Result);
+        var sumResult = GetPropertyValue(okResult.Value, "Result");
+        Assert.Equal(expected, sumResult);
     }
 }

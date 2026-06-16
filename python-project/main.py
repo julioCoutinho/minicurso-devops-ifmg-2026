@@ -153,6 +153,14 @@ def get_item_by_name(name: str) -> Optional[Item]:
             return item
     return None
 
+@app.get("/items/", response_model=Item, tags=["Items"])
+def get_item_by_id(id: int) -> Optional[Item]:
+    """Get an item by ID"""
+    for item in items_db:
+        if item.id == id:
+            return item
+    return None
+
 @app.get("/users/", response_model=User, tags=["Users"])
 def get_user_by_username(username: str) -> Optional[User]:
     """Get a user by username"""

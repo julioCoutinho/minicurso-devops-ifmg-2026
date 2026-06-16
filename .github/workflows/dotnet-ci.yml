@@ -40,3 +40,4 @@ jobs:
       with:
         name: dotnet-api-app
         path: ./publish
+        retention-days: 1

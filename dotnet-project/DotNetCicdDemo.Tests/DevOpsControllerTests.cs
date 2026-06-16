@@ -1,5 +1,6 @@
 using DotNetCicdDemo.Api.Controllers;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
 using Xunit;
 
 namespace DotNetCicdDemo.Tests;
@@ -13,6 +14,11 @@ public class DevOpsControllerTests
         _controller = new DevOpsController();
     }
 
+    private object GetPropertyValue(object obj, string propertyName)
+    {
+        return obj.GetType().GetProperty(propertyName)?.GetValue(obj, null);
+    }
+    
     [Fact]
     public void Get_ReturnsOkWithWelcomeMessage()
     {

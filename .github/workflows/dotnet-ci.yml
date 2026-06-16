@@ -21,15 +21,19 @@ jobs:
         
     - name: Restore dependencies
       run: dotnet restore
+      working-directory: ./dotnet-project
       
     - name: Build
       run: dotnet build --no-restore --configuration Release
-      
+      working-directory: ./dotnet-project
+
     - name: Test
       run: dotnet test --no-build --verbosity normal --configuration Release
+      working-directory: ./dotnet-project
       
     - name: Publish
       run: dotnet publish DotNetCicdDemo.Api/DotNetCicdDemo.Api.csproj -c Release -o ./publish
+      working-directory: ./dotnet-project
       
     - name: Upload Artifact
       uses: actions/upload-artifact@v4

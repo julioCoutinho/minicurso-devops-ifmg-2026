@@ -19,7 +19,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: dotnet-api-app
-        path: ./app_artifact
+        path: ./publish
 
     - name: Deploy to Hosting Service (Placeholder)
       run: |

@@ -145,6 +145,7 @@ async def get_stats():
     }
 
 # Utility functions for testing
+@app.get("/items/", response_model=Item, tags=["Items"])
 def get_item_by_name(name: str) -> Optional[Item]:
     """Get an item by name"""
     for item in items_db:
@@ -152,6 +153,7 @@ def get_item_by_name(name: str) -> Optional[Item]:
             return item
     return None
 
+@app.get("/users/", response_model=User, tags=["Users"])
 def get_user_by_username(username: str) -> Optional[User]:
     """Get a user by username"""
     for user in users_db:

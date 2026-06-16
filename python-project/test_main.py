@@ -53,15 +53,7 @@ def test_get_item_by_id():
 
 def test_get_item_by_name():
     """Test getting a specific item by name"""
-    response = client.get("/items/?name=Laptop")
-    assert response.status_code == 200
-    item = response.json()
-    assert item["id"] == 1
-    assert item["name"] == "Laptop"
-
-def test_get_item_by_id():
-    """Test getting a specific item by ID"""
-    response = client.get("/items/?id=1")
+    response = client.get("/items/Laptop")
     assert response.status_code == 200
     item = response.json()
     assert item["id"] == 1

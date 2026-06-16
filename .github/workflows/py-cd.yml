@@ -1,0 +1,44 @@
+name: FastAPI CD - Deploy
+
+on:
+  workflow_run:
+    workflows: ["FastAPI CI/CD"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production # Exemplo de ambiente de produção, pode exigir aprovação manual
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: fastapi-app
+        path: ./app_artifact
+
+    - name: Deploy to Hosting Service (Placeholder)
+      run: |
+        echo "Simulating deployment to a hosting service..."
+        echo "Artifacts downloaded to: $(pwd)/app_artifact"
+        echo "You would replace this step with actual deployment commands."
+        echo "For example, using Azure/webapps-deploy@v3 for Azure App Service,"
+        echo "or a custom script for other platforms."
+        # Exemplo para Azure App Service (descomente e configure com seus secrets):
+        # - name: 'Deploy to Azure WebApp'
+        #   uses: azure/webapps-deploy@v3
+        #   with:
+        #     app-name: 'your-fastapi-app-name'
+        #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        #     package: './app_artifact'
+        # Exemplo para Heroku (requer Heroku CLI e API Key como secret):
+        # - name: Deploy to Heroku
+        #   env:
+        #     HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        #   run: |
+        #     heroku login -i
+        #     heroku git:remote -a your-heroku-app-name
+        #     git push heroku main

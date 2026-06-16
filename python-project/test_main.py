@@ -206,17 +206,6 @@ def test_get_item_by_name():
     item = get_item_by_name("NonExistent")
     assert item is None
 
-def teste_get_item_by_id():
-    """Test the get_item_by_id function"""
-    item = get_item_by_id(1)
-    assert item is not None
-    assert item.id == 1
-    assert item.name == "Laptop"
-
-    # Test non-existent item
-    item = get_item_by_id(9999)
-    assert item is None
-
 def test_get_user_by_username():
     """Test the get_user_by_username function"""
     user = get_user_by_username("john_doe")

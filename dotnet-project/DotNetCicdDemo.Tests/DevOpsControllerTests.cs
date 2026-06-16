@@ -18,7 +18,7 @@ public class DevOpsControllerTests
     {
         return obj.GetType().GetProperty(propertyName)?.GetValue(obj, null);
     }
-    
+
     [Fact]
     public void Get_ReturnsOkWithWelcomeMessage()
     {
@@ -27,8 +27,8 @@ public class DevOpsControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        dynamic data = okResult.Value;
-        Assert.Equal("Welcome to DevOps Demo API (.NET)", data.Message);
+        var message = GetPropertyValue(okResult.Value, "Message");
+        Assert.Equal("Welcome to DevOps Demo API (.NET)", message);
     }
 
     [Fact]
@@ -39,8 +39,8 @@ public class DevOpsControllerTests
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        dynamic data = okResult.Value;
-        Assert.Equal("Healthy", data.Status);
+        var status = GetPropertyValue(okResult.Value, "Status");
+        Assert.Equal("Healthy", status);
     }
 
     [Theory]

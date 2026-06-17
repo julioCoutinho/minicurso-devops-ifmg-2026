@@ -38,6 +38,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: fastapi-app
+        retention-days: 1
         path: |
           ./python-project/main.py
           ./python-project/requirements.txt

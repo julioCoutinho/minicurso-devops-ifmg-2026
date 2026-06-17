@@ -149,69 +149,73 @@ Para esta demonstração, vamos simular um cenário onde temos um aplicativo web
 
 ### Cenário:
 
-Um aplicativo web .NET Core simples que exibe uma mensagem "Hello, GitHub Actions!". Queremos:
+Um aplicativo web .NET Core e/ou um aplicativo python. Queremos:
 1.  Configurar um workflow de CI para construir o aplicativo e executar testes unitários.
 2.  Configurar um workflow de CD para implantar o aplicativo em um Azure App Service (ou GitHub Pages para um aplicativo estático).
 
 ### Pré-requisitos:
-*   Conta GitHub e repositório com um aplicativo .NET Core (ex: `dotnet new webapp -n MyGitHubApp`).
+*   Conta GitHub e repositório com um aplicativo .NET Core e/ou Python (ex: `dotnet new webapp -n MyGitHubApp`).
 *   (Opcional para CD) Conta Azure e assinatura ativa, com um Azure App Service criado.
 
 ### Passos da Demonstração:
 
 #### 1. Configurando um Workflow de CI (Build e Teste)
 
-Crie um arquivo `.github/workflows/ci.yml` na raiz do seu repositório. Este arquivo definirá os passos para construir e testar seu aplicativo.
+Crie um arquivo `.github/workflows/dotnet-ci-cd.yml` na raiz do seu repositório. Este arquivo definirá os passos para construir e testar seu aplicativo.
 
 ```yaml
-# .github/workflows/ci.yml
+# .github/workflows/dotnet-ci-cd.yml
 
-name: CI Build and Test
+name: .NET CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Necessário para algumas ações de análise de código
-
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.x'
-
+        dotnet-version: 8.0.x
+        
     - name: Restore dependencies
       run: dotnet restore
-
+      working-directory: ./dotnet-project
+      
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --no-restore --configuration Release
+      working-directory: ./dotnet-project
 
-    - name: Run tests
-      run: dotnet test --configuration Release --no-build --verbosity normal
-
-    - name: Publish artifact
-      run: dotnet publish --configuration Release --output ${{github.workspace}}/app
-
-    - name: Upload artifact
+    - name: Test
+      run: dotnet test --no-build --verbosity normal --configuration Release
+      working-directory: ./dotnet-project
+      
+    - name: Publish
+      run: dotnet publish DotNetCicdDemo.Api/DotNetCicdDemo.Api.csproj -c Release -o ./publish
+      working-directory: ./dotnet-project
+      
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: my-web-app
-        path: ${{github.workspace}}/app
+        name: dotnet-api-app
+        path: ./dotnet-project/publish
+        retention-days: 1
+
 ```
 
 **Explicação:**
 *   `name`: Nome do workflow.
-*   `on`: Define os eventos que acionam o workflow (`push` e `pull_request` no branch `main`).
+*   `on`: Define os eventos que acionam o workflow (`push`, `pull_request` no branch `main` e um workflow_dispatch para acionamento `manual`).
 *   `jobs.build`: Define um job chamado `build`.
     *   `runs-on: ubuntu-latest`: Especifica que o job será executado em um runner hospedado pelo GitHub com Ubuntu Linux.
     *   `steps`:
@@ -222,59 +226,170 @@ jobs:
 
 Após adicionar este arquivo e fazer um commit/push para o repositório, o GitHub Actions detectará o arquivo e executará o workflow. Você pode monitorar sua execução na aba "Actions" do seu repositório GitHub.
 
-#### 2. Configurando um Workflow de CD (Deploy para Azure App Service)
-
-Crie um arquivo `.github/workflows/cd.yml` na raiz do seu repositório. Este workflow será acionado após o sucesso do workflow de CI e implantará o artefato no Azure App Service.
+Crie um arquivo `.github/workflows/py-ci-cd.yml` na raiz do seu repositório. Este arquivo definirá os passos para construir e testar seu aplicativo.
 
 ```yaml
-# .github/workflows/cd.yml
+# .github/workflows/py-ci-cd.yml
 
-name: CD Deploy to Azure App Service
+name: FastAPI CI/CD
 
 on:
-  workflow_run:
-    workflows: ["CI Build and Test"]
-    types:
-      - completed
+  push:
     branches:
       - main
-
-env:
-  AZURE_WEBAPP_NAME: SeuAzureAppServiceName # Substitua pelo nome do seu App Service
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-test:
     runs-on: ubuntu-latest
-    environment: production # Opcional: Define um ambiente para o deploy
 
     steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: my-web-app
-        path: ${{github.workspace}}/app
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: 'Deploy to Azure WebApp'
-      uses: azure/webapps-deploy@v3
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: ${{github.workspace}}/app
+        python-version: '3.9' # Use a versão do Python que você está usando
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      working-directory: ./python-project
+      
+    - name: Run tests
+      run: |
+        pytest
+      working-directory: ./python-project
+      
+
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: fastapi-app
+        retention-days: 1
+        path: |
+          ./python-project/main.py
+          ./python-project/requirements.txt
+          # Adicione outros arquivos necessários para a execução da sua aplicação
+
 ```
 
 **Explicação:**
 *   `name`: Nome do workflow.
-*   `on.workflow_run`: Este workflow será acionado quando o workflow "CI Build and Test" for concluído com sucesso no branch `main`.
-*   `env.AZURE_WEBAPP_NAME`: Define uma variável de ambiente para o nome do seu Azure App Service.
-*   `jobs.deploy`: Define um job chamado `deploy`.
+*   `on`: Define os eventos que acionam o workflow (`push`, `pull_request` no branch `main` e workflow_dispatch para acionamento `manual`).
+*   `jobs.build`: Define um job chamado `build`.
+    *   `runs-on: ubuntu-latest`: Especifica que o job será executado em um runner hospedado pelo GitHub com Ubuntu Linux.
+    *   `steps`:
+        *   `uses: actions/checkout@v4`: Action para fazer o checkout do código do repositório.
+        *   `uses: actions/setup-python@v5`: Action para configurar a versão do python.
+        *   `name: Install dependencies`, `name: Run tests`: Steps que executam comandos `python` para baixar e instalar dependências, construir, testar o aplicativo. Os testes unitários são cruciais para a CI.
+        *   `uses: actions/upload-artifact@v4`: Action para carregar os artefatos gerados (o aplicativo publicado) para que possam ser usados por outros workflows (como o de CD).
+
+Após adicionar este arquivo e fazer um commit/push para o repositório, o GitHub Actions detectará o arquivo e executará o workflow. Você pode monitorar sua execução na aba "Actions" do seu repositório GitHub.
+
+#### 2. Configurando um Workflow de CD (Deploy para Azure App Service)
+
+Dentro do arquivo `.github/workflows/dotnet-ci-cd.yml` do seu repositório adicione as linhas abaixo após o final do job `build`. Este workflow será acionado após o sucesso do workflow de CI e implantará o artefato no Azure App Service.
+
+```yaml
+# .github/workflows/dotnet-ci-cd.yml
+
+deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+
+    - name: Deploy to Hosting Service (Placeholder)
+      run: |
+        echo "Simulating deployment of .NET API..."
+        echo "Artifacts ready at: ./app_artifact"
+        # Exemplo para Azure App Service:
+        # - name: 'Deploy to Azure WebApp'
+        #   uses: azure/webapps-deploy@v3
+        #   with:
+        #     app-name: 'your-dotnet-app-name'
+        #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        #     package: './app_artifact'
+```
+
+**Explicação:**
+*   `deploy`: Nome do job do workflow.
     *   `runs-on: ubuntu-latest`: Executa em um runner Ubuntu.
+    *   `needs: build`: Cria uma dependencia do job anterior chamado `build`.
     *   `environment: production`: (Opcional) Associa o job a um ambiente de produção, o que pode impor regras de proteção (aprovações manuais, etc.).
     *   `steps`:
-        *   `uses: actions/download-artifact@v4`: Action para baixar o artefato (`my-web-app`) gerado pelo workflow de CI.
+        *   `uses: actions/download-artifact@v4`: Action para baixar o artefato (`dotnet-api-app`) gerado pelo workflow de CI.
         *   `uses: azure/webapps-deploy@v3`: Action oficial do Azure para implantar aplicativos em Azure App Services.
             *   `app-name`: O nome do seu Azure App Service.
             *   `publish-profile`: Um **secret** do GitHub que contém o perfil de publicação do seu Azure App Service. Isso é usado para autenticar a implantação. Você deve obter o perfil de publicação do seu App Service no portal do Azure e adicioná-lo como um secret no seu repositório GitHub (Settings > Secrets and variables > Actions > New repository secret).
             *   `package`: O caminho para o artefato do aplicativo a ser implantado.
+
+Dentro do arquivo `.github/workflows/py-ci-cd.yml` do seu repositório adicione o código abaixo após o final do job `build-and-test`. Este workflow será acionado após o sucesso do workflow de CI e implantará o artefato no Azure App Service.
+
+```yaml
+# .github/workflows/dotnet-ci-cd.yml
+
+deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    environment: production # Exemplo de ambiente de produção, pode exigir aprovação manual
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      
+    - name: Deploy to Hosting Service (Placeholder)
+      run: |
+        echo "Simulating deployment to a hosting service..."
+        echo "Artifacts downloaded to: $(pwd)/app_artifact"
+        echo "You would replace this step with actual deployment commands."
+        echo "For example, using Azure/webapps-deploy@v3 for Azure App Service,"
+        echo "or a custom script for other platforms."
+        # Exemplo para Azure App Service (descomente e configure com seus secrets):
+        # - name: 'Deploy to Azure WebApp'
+        #   uses: azure/webapps-deploy@v3
+        #   with:
+        #     app-name: 'your-fastapi-app-name'
+        #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        #     package: './app_artifact'
+        # Exemplo para Heroku (requer Heroku CLI e API Key como secret):
+        # - name: Deploy to Heroku
+        #   env:
+        #     HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        #   run: |
+        #     heroku login -i
+        #     heroku git:remote -a your-heroku-app-name
+        #     git push heroku main
+```
+
+**Explicação:**
+*   `deploy`: Nome do job do workflow.
+    *   `runs-on: ubuntu-latest`: Executa em um runner Ubuntu.
+    *   `needs: build-and-test`: Cria uma dependencia do job anterior chamado `build-and-test`.
+    *   `environment: production`: (Opcional) Associa o job a um ambiente de produção, o que pode impor regras de proteção (aprovações manuais, etc.).
+    *   `steps`:
+        *   `uses: actions/download-artifact@v4`: Action para baixar o artefato (`dotnet-api-app`) gerado pelo workflow de CI.
+        *   `uses: azure/webapps-deploy@v3`: Action oficial do Azure para implantar aplicativos em Azure App Services.
+            *   `app-name`: O nome do seu Azure App Service.
+            *   `publish-profile`: Um **secret** do GitHub que contém o perfil de publicação do seu Azure App Service. Isso é usado para autenticar a implantação. Você deve obter o perfil de publicação do seu App Service no portal do Azure e adicioná-lo como um secret no seu repositório GitHub (Settings > Secrets and variables > Actions > New repository secret).
+            *   `package`: O caminho para o artefato do aplicativo a ser implantado.
+        *   `- name: Deploy to Heroku`:
+            *   `env:`:
+                *   `HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}`: Um **secret** do Github que contém a API KEY que é utilizada para conexão no Heroku.
+            *   `run: |`:
+                *   `heroku login -i`: Realiza o login no Heroku.
+                *   `heroku git:remote -a your-heroku-app-name`: Da acesso para o Heroku ao seu repositório.
+                *   `git push heroku main`: Sobe o seu codibo para a branch heroku.
+
 
 ### Secrets, Environments e Variables no GitHub
 
